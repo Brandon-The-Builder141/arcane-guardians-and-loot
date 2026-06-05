@@ -153,22 +153,24 @@ export function castAbility(s: GameState, id: AbilityId, x?: number, y?: number)
   const def = ABILITIES.find(d => d.id === id)!;
   if (id === "meteor") {
     if (x == null || y == null) return false;
+    const radius = def.radius ?? 0, damage = def.damage ?? 0;
     for (const e of s.enemies) {
-      if (Math.hypot(e.x - x, e.y - y) < def.radius) {
-        damageEnemy(s, e, def.damage * s.globalDmgMul, null, "arcane");
+      if (Math.hypot(e.x - x, e.y - y) < radius) {
+        damageEnemy(s, e, damage * s.globalDmgMul, null, "arcane");
       }
     }
     for (let i = 0; i < 60; i++) {
-      const a = Math.random() * Math.PI * 2; const r = Math.random() * def.radius;
+      const a = Math.random() * Math.PI * 2; const r = Math.random() * radius;
       s.particles.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, vx: (Math.random() - .5) * 80, vy: -Math.random() * 120, life: 0.8, max: 0.8, color: def.color, size: 4 + Math.random() * 4 });
     }
   } else if (id === "freeze") {
-    for (const e of s.enemies) { e.slowUntil = s.time + def.duration; e.slowFactor = def.slow; }
+    const duration = def.duration ?? 0, slow = def.slow ?? 0;
+    for (const e of s.enemies) { e.slowUntil = s.time + duration; e.slowFactor = slow; }
     for (let i = 0; i < 80; i++) {
       s.particles.push({ x: Math.random() * s.width, y: Math.random() * s.height, vx: 0, vy: -20, life: 1.2, max: 1.2, color: def.color, size: 2 + Math.random() * 3 });
     }
   } else if (id === "heal") {
-    s.lives = Math.min(s.maxLives, s.lives + def.heal);
+    s.lives = Math.min(s.maxLives, s.lives + (def.heal ?? 0));
   }
   ab.ready = s.time + def.cooldown * s.cdMul;
   s.selectedAbility = null;
