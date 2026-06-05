@@ -14,7 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          profile_xp: number
+          shards: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id: string
+          profile_xp?: number
+          shards?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          profile_xp?: number
+          shards?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      runs: {
+        Row: {
+          created_at: string
+          id: string
+          map_id: string
+          shards_earned: number
+          user_id: string
+          victory: boolean
+          wave_reached: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          map_id: string
+          shards_earned?: number
+          user_id: string
+          victory?: boolean
+          wave_reached?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          map_id?: string
+          shards_earned?: number
+          user_id?: string
+          victory?: boolean
+          wave_reached?: number
+        }
+        Relationships: []
+      }
+      save_states: {
+        Row: {
+          meta: Json
+          run_state: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          meta?: Json
+          run_state?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          meta?: Json
+          run_state?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
