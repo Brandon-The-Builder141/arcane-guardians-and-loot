@@ -168,13 +168,16 @@ export const PATH: Array<[number, number]> = [
 
 export const SANCTUM = { x: 1.0, y: 0.84 };
 
-export const ABILITIES = [
+export type AbilityId = "meteor" | "freeze" | "heal";
+export interface AbilityDef {
+  id: AbilityId; name: string; desc: string; cooldown: number; color: string;
+  damage?: number; radius?: number; slow?: number; duration?: number; heal?: number;
+}
+export const ABILITIES: AbilityDef[] = [
   { id: "meteor", name: "Meteor", desc: "Crashing meteor: 220 dmg in 110px radius.", cooldown: 18, damage: 220, radius: 110, color: "#ff7a3a" },
   { id: "freeze", name: "Hoarfrost", desc: "Slow all enemies 60% for 4s.", cooldown: 25, slow: 0.6, duration: 4, color: "#7adfff" },
   { id: "heal",   name: "Mend Sanctum", desc: "Restore 5 lives.", cooldown: 60, heal: 5, color: "#9bff9b" },
-] as const;
-
-export type AbilityId = (typeof ABILITIES)[number]["id"];
+];
 
 // Skill tree nodes
 export interface SkillNode {
