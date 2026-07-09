@@ -15,6 +15,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSkillTreeRouteImport } from './routes/_authenticated/skill-tree'
 import { Route as AuthenticatedPlayRouteImport } from './routes/_authenticated/play'
+import { Route as AuthenticatedPlayIndexRouteImport } from './routes/_authenticated/play.index'
+import { Route as AuthenticatedPlayMapIdRouteImport } from './routes/_authenticated/play.$mapId'
 
 const CodexRoute = CodexRouteImport.update({
   id: '/codex',
@@ -45,20 +47,33 @@ const AuthenticatedPlayRoute = AuthenticatedPlayRouteImport.update({
   path: '/play',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlayIndexRoute = AuthenticatedPlayIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedPlayRoute,
+} as any)
+const AuthenticatedPlayMapIdRoute = AuthenticatedPlayMapIdRouteImport.update({
+  id: '/$mapId',
+  path: '/$mapId',
+  getParentRoute: () => AuthenticatedPlayRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/codex': typeof CodexRoute
-  '/play': typeof AuthenticatedPlayRoute
+  '/play': typeof AuthenticatedPlayRouteWithChildren
   '/skill-tree': typeof AuthenticatedSkillTreeRoute
+  '/play/$mapId': typeof AuthenticatedPlayMapIdRoute
+  '/play/': typeof AuthenticatedPlayIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/codex': typeof CodexRoute
-  '/play': typeof AuthenticatedPlayRoute
   '/skill-tree': typeof AuthenticatedSkillTreeRoute
+  '/play/$mapId': typeof AuthenticatedPlayMapIdRoute
+  '/play': typeof AuthenticatedPlayIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,14 +81,23 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/codex': typeof CodexRoute
-  '/_authenticated/play': typeof AuthenticatedPlayRoute
+  '/_authenticated/play': typeof AuthenticatedPlayRouteWithChildren
   '/_authenticated/skill-tree': typeof AuthenticatedSkillTreeRoute
+  '/_authenticated/play/$mapId': typeof AuthenticatedPlayMapIdRoute
+  '/_authenticated/play/': typeof AuthenticatedPlayIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/codex' | '/play' | '/skill-tree'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/codex'
+    | '/play'
+    | '/skill-tree'
+    | '/play/$mapId'
+    | '/play/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/codex' | '/play' | '/skill-tree'
+  to: '/' | '/auth' | '/codex' | '/skill-tree' | '/play/$mapId' | '/play'
   id:
     | '__root__'
     | '/'
@@ -82,6 +106,8 @@ export interface FileRouteTypes {
     | '/codex'
     | '/_authenticated/play'
     | '/_authenticated/skill-tree'
+    | '/_authenticated/play/$mapId'
+    | '/_authenticated/play/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,16 +161,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/play/': {
+      id: '/_authenticated/play/'
+      path: '/'
+      fullPath: '/play/'
+      preLoaderRoute: typeof AuthenticatedPlayIndexRouteImport
+      parentRoute: typeof AuthenticatedPlayRoute
+    }
+    '/_authenticated/play/$mapId': {
+      id: '/_authenticated/play/$mapId'
+      path: '/$mapId'
+      fullPath: '/play/$mapId'
+      preLoaderRoute: typeof AuthenticatedPlayMapIdRouteImport
+      parentRoute: typeof AuthenticatedPlayRoute
+    }
   }
 }
 
+interface AuthenticatedPlayRouteChildren {
+  AuthenticatedPlayMapIdRoute: typeof AuthenticatedPlayMapIdRoute
+  AuthenticatedPlayIndexRoute: typeof AuthenticatedPlayIndexRoute
+}
+
+const AuthenticatedPlayRouteChildren: AuthenticatedPlayRouteChildren = {
+  AuthenticatedPlayMapIdRoute: AuthenticatedPlayMapIdRoute,
+  AuthenticatedPlayIndexRoute: AuthenticatedPlayIndexRoute,
+}
+
+const AuthenticatedPlayRouteWithChildren =
+  AuthenticatedPlayRoute._addFileChildren(AuthenticatedPlayRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedPlayRoute: typeof AuthenticatedPlayRoute
+  AuthenticatedPlayRoute: typeof AuthenticatedPlayRouteWithChildren
   AuthenticatedSkillTreeRoute: typeof AuthenticatedSkillTreeRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedPlayRoute: AuthenticatedPlayRoute,
+  AuthenticatedPlayRoute: AuthenticatedPlayRouteWithChildren,
   AuthenticatedSkillTreeRoute: AuthenticatedSkillTreeRoute,
 }
 
@@ -160,13 +213,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

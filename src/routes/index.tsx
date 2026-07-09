@@ -46,9 +46,9 @@ function Landing() {
         </div>
         <div className="mt-16 grid w-full max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            ["15", "Waves"],
-            ["4", "Tower Types"],
-            ["6", "Creatures"],
+            ["2", "Realms"],
+            ["7", "Tower Types"],
+            ["12", "Creatures"],
             ["3", "Abilities"],
           ].map(([n, l]) => (
             <div key={l} className="parchment rounded-lg p-4">

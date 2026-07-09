@@ -1,9 +1,10 @@
-import { TOWERS, ENEMIES, WAVES, PATH, SANCTUM, ABILITIES, type TowerDef, type EnemyDef, type AbilityId, type TowerStats, type MetaState } from "./content";
+import { TOWERS, ENEMIES, ABILITIES, MAPS, type TowerDef, type EnemyDef, type AbilityId, type TowerStats, type MetaState, type Wave, type MapDef } from "./content";
 
 export interface Tower {
   id: number; def: TowerDef; x: number; y: number;
   level: number; xp: number; xpNeeded: number; pendingUpgrade: number; // 0=none, 1=tier1 pending, 2=tier2 pending
   stats: TowerStats; cooldown: number; totalKills: number; totalDamage: number; chosenUpgrades: number[];
+  transcended: boolean;
 }
 
 export interface Enemy {
@@ -37,14 +38,15 @@ export interface GameState {
   globalDmgMul: number; globalRangeMul: number; cdMul: number; betweenWaveBonus: number;
   totalKilled: number; encountered: Set<string>;
   pathPixels: { x: number; y: number }[];
+  waves: Wave[];
+  map: MapDef;
 }
 
-export interface InitOptions { width: number; height: number; meta: MetaState; }
+export interface InitOptions { width: number; height: number; meta: MetaState; mapId: string; }
 
-const TILE_HIT_RADIUS = 36;
-
-export function createState({ width, height, meta }: InitOptions): GameState {
-  const pathPixels = PATH.map(([nx, ny]) => ({ x: nx * width, y: ny * height }));
+export function createState({ width, height, meta, mapId }: InitOptions): GameState {
+  const map = MAPS[mapId] ?? MAPS["enchanted-forest"];
+  const pathPixels = map.path.map(([nx, ny]: [number, number]) => ({ x: nx * width, y: ny * height }));
   let gold = 200, maxLives = 20;
   let globalDmgMul = 1, globalRangeMul = 1, cdMul = 1, betweenWaveBonus = 0;
   for (const sId of meta.unlockedSkills) {
@@ -58,6 +60,8 @@ export function createState({ width, height, meta }: InitOptions): GameState {
     if (sId === "cd1") cdMul *= 0.75;
     if (sId === "interest") betweenWaveBonus += 5;
   }
+  // scale difficulty by map
+  const diffMul = 1 + (map.difficulty - 2) * 0.15;
   return {
     width, height, running: false, speed: 1,
     gold, lives: maxLives, maxLives, wave: 0, waveActive: false,
@@ -66,9 +70,11 @@ export function createState({ width, height, meta }: InitOptions): GameState {
     abilities: ABILITIES.map(a => ({ id: a.id, ready: 0 })),
     selectedAbility: null, hover: null, placing: null, selectedTowerId: null,
     status: "idle", time: 0, meta,
-    globalDmgMul, globalRangeMul, cdMul, betweenWaveBonus,
+    globalDmgMul, globalRangeMul, cdMul, betweenWaveBonus: betweenWaveBonus * diffMul,
     totalKilled: 0, encountered: new Set(),
     pathPixels,
+    waves: map.waves,
+    map,
   };
 }
 
@@ -76,9 +82,9 @@ let nextId = 1;
 const newId = () => nextId++;
 
 export function startWave(s: GameState) {
-  if (s.waveActive || s.wave >= WAVES.length) return;
+  if (s.waveActive || s.wave >= s.waves.length) return;
   s.wave += 1;
-  const wave = WAVES[s.wave - 1];
+  const wave = s.waves[s.wave - 1];
   const queue: { enemy: string; t: number }[] = [];
   let t = 0;
   for (const sp of wave.spawns) {
@@ -123,7 +129,7 @@ export function placeTower(s: GameState, def: TowerDef, x: number, y: number): b
   };
   s.towers.push({
     id: newId(), def, x, y, level: 1, xp: 0, xpNeeded: 30, pendingUpgrade: 0,
-    stats, cooldown: 0, totalKills: 0, totalDamage: 0, chosenUpgrades: [],
+    stats, cooldown: 0, totalKills: 0, totalDamage: 0, chosenUpgrades: [], transcended: false,
   });
   spawnParticles(s, x, y, def.color, 22);
   return true;
@@ -136,6 +142,23 @@ export function sellTower(s: GameState, id: number) {
   s.towers = s.towers.filter(x => x.id !== id);
   s.selectedTowerId = null;
   spawnParticles(s, t.x, t.y, "#aaa", 18);
+}
+
+export const TRANSCEND_COST = 300;
+
+export function transcendTower(s: GameState, id: number): boolean {
+  const t = s.towers.find(t => t.id === id);
+  if (!t) return false;
+  if (t.level < 5 || t.transcended) return false;
+  if (s.gold < TRANSCEND_COST) return false;
+  s.gold -= TRANSCEND_COST;
+  t.transcended = true;
+  t.stats.damage *= 1.6;
+  t.stats.range *= 1.2;
+  t.stats.fireRate *= 1.3;
+  t.stats.splash *= 1.15;
+  spawnParticles(s, t.x, t.y, t.def.color, 60);
+  return true;
 }
 
 export function chooseUpgrade(s: GameState, towerId: number, choice: number) {
@@ -328,8 +351,8 @@ export function step(s: GameState, dt: number) {
   // end of wave
   if (s.waveActive && s.spawnQueue.length === 0 && s.enemies.length === 0) {
     s.waveActive = false;
-    const wv = WAVES[s.wave - 1]; if (wv) s.gold += wv.reward + s.betweenWaveBonus;
-    if (s.wave >= WAVES.length) { s.status = "victory"; s.running = false; }
+    const wv = s.waves[s.wave - 1]; if (wv) s.gold += wv.reward + s.betweenWaveBonus;
+    if (s.wave >= s.waves.length) { s.status = "victory"; s.running = false; }
     else s.status = "between";
   }
 }
@@ -395,8 +418,8 @@ function hitProjectile(s: GameState, p: Projectile, target: Enemy) {
 
 export function computeShardsEarned(s: GameState): number {
   // 5 per wave cleared, +25 for victory, +floor(kills/10)
-  const cleared = s.status === "victory" ? WAVES.length : Math.max(0, s.wave - (s.waveActive ? 1 : 0));
+  const cleared = s.status === "victory" ? s.waves.length : Math.max(0, s.wave - (s.waveActive ? 1 : 0));
   return cleared * 5 + (s.status === "victory" ? 25 : 0) + Math.floor(s.totalKilled / 10);
 }
 
-export { TOWERS, WAVES, SANCTUM, ABILITIES };
+export { TOWERS, ABILITIES };

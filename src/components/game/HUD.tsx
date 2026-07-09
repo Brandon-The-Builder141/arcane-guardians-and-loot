@@ -1,6 +1,5 @@
 import { Heart, Coins, Sparkles, Hourglass, Pause, Play, FastForward, LogOut } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { WAVES } from "@/lib/game/content";
 import type { GameState } from "@/lib/game/engine";
 
 interface Props {
@@ -20,7 +19,7 @@ export function TopBar({ s, onStartWave, onTogglePause, onSpeed }: Props) {
       <div className="flex items-center gap-1.5 text-accent"><Sparkles className="h-4 w-4" /><span className="font-display text-lg">{s.totalKilled}</span><span className="text-xs text-muted-foreground">slain</span></div>
       <div className="ml-auto flex items-center gap-2">
         <div className="text-xs text-muted-foreground">Wave</div>
-        <div className="font-display text-xl text-gradient-gold">{s.wave}/{WAVES.length}</div>
+        <div className="font-display text-xl text-gradient-gold">{s.wave}/{s.waves.length}</div>
         {!s.waveActive && s.status !== "victory" && s.status !== "defeat" ? (
           <button onClick={onStartWave} className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:opacity-90 glow-gold">
             <span className="flex items-center gap-1"><Hourglass className="h-3 w-3" /> {s.wave === 0 ? "Begin" : "Next wave"}</span>
